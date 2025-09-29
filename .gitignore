@@ -5,6 +5,8 @@
 .devcontainer
 .vscode
 gochirpy
+__debug*
+out
 
 # Binaries for programs and plugins
 *.exe
