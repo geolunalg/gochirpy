@@ -10,18 +10,18 @@ import (
 	"github.com/google/uuid"
 )
 
+type returnVals struct {
+	ID        string    `json:"id"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+	Body      string    `json:"body"`
+	UserID    string    `json:"user_id"`
+}
+
 func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Body   string `json:"body"`
 		UserID string `json:"user_id"`
-	}
-
-	type returnVals struct {
-		ID        string    `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Body      string    `json:"body"`
-		UserID    string    `json:"user_id"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -83,4 +83,27 @@ func getCleanedBody(body string, badWords map[string]struct{}) string {
 	}
 	cleaned := strings.Join(words, " ")
 	return cleaned
+}
+
+func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
+	allChirps := []returnVals{}
+
+	chirps, err := cfg.db.GetChirps(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Failed to get chirp", err)
+		return
+	}
+
+	for _, chirp := range chirps {
+		respChirp := returnVals{
+			ID:        chirp.ID.String(),
+			CreatedAt: chirp.CreatedAt,
+			UpdatedAt: chirp.UpdatedAt,
+			Body:      chirp.Body,
+			UserID:    chirp.UserID.String(),
+		}
+		allChirps = append(allChirps, respChirp)
+	}
+
+	respondWithJSON(w, http.StatusOK, allChirps)
 }
