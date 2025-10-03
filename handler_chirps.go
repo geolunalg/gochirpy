@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/geolunalg/gochirpy/internal/auth"
 	"github.com/geolunalg/gochirpy/internal/database"
 	"github.com/google/uuid"
 )
@@ -21,12 +22,24 @@ type returnVals struct {
 func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
 		Body   string `json:"body"`
-		UserID string `json:"user_id"`
+		// UserID string `json:"user_id"`
+	}
+
+	token, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "invalid token", err)
+		return
+	}
+
+	userId, err := auth.ValidateJWT(token, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "invalid token", err)
+		return
 	}
 
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
 		return
@@ -45,18 +58,18 @@ func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	}
 	cleaned := getCleanedBody(params.Body, badWords)
 
-	userUUID, err := uuid.Parse(params.UserID)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Couldn't parse user id", err)
-		return
-	}
+	// userUUID, err := uuid.Parse(params.UserID)
+	// if err != nil {
+	// 	respondWithError(w, http.StatusInternalServerError, "Couldn't parse user id", err)
+	// 	return
+	// }
 
 	chirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		ID:        uuid.New(),
 		CreatedAt: time.Now().UTC(),
 		UpdatedAt: time.Now().UTC(),
 		Body:      cleaned,
-		UserID:    userUUID,
+		UserID:    userId,
 	})
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Failed to create new chirp", err)

@@ -16,6 +16,7 @@ import (
 type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
+	jwtSecret      string
 }
 
 func main() {
@@ -31,6 +32,11 @@ func main() {
 		log.Fatal("DB_URL must be set")
 	}
 
+	jwtSecret := os.Getenv("JWT_SECRET")
+	if dbURL == "" {
+		log.Fatal("JWT_SECRET must be set")
+	}
+
 	dbConn, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("Error opening database: %s", err)
@@ -40,6 +46,7 @@ func main() {
 	apiCfg := apiConfig{
 		fileserverHits: atomic.Int32{},
 		db:             dbQueries,
+		jwtSecret:      jwtSecret,
 	}
 
 	mux := http.NewServeMux()
