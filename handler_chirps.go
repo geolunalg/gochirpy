@@ -21,8 +21,7 @@ type returnVals struct {
 
 func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Body   string `json:"body"`
-		// UserID string `json:"user_id"`
+		Body string `json:"body"`
 	}
 
 	token, err := auth.GetBearerToken(r.Header)
@@ -57,12 +56,6 @@ func (cfg *apiConfig) handlerAddChirp(w http.ResponseWriter, r *http.Request) {
 		"fornax":    {},
 	}
 	cleaned := getCleanedBody(params.Body, badWords)
-
-	// userUUID, err := uuid.Parse(params.UserID)
-	// if err != nil {
-	// 	respondWithError(w, http.StatusInternalServerError, "Couldn't parse user id", err)
-	// 	return
-	// }
 
 	chirp, err := cfg.db.CreateChirp(r.Context(), database.CreateChirpParams{
 		ID:        uuid.New(),

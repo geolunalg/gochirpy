@@ -12,17 +12,17 @@ import (
 
 func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 	type parameters struct {
-		Password         string `json:"password"`
-		Email            string `json:"email"`
-		ExpiresInSeconds *int   `json:"expires_in_seconds"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
 
 	type returnVals struct {
-		ID        string    `json:"id"`
-		CreatedAt time.Time `json:"created_at"`
-		UpdatedAt time.Time `json:"updated_at"`
-		Email     string    `json:"email"`
-		Token     string    `json:"token"`
+		ID           string    `json:"id"`
+		CreatedAt    time.Time `json:"created_at"`
+		UpdatedAt    time.Time `json:"updated_at"`
+		Email        string    `json:"email"`
+		Token        string    `json:"token"`
+		RefreshToken string    `json:"refresh_token"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
@@ -39,37 +39,50 @@ func (cfg *apiConfig) handlerLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	pwmatch, err := auth.CheckPasswordHash(params.Password, user.HashedPassword)
+	pwMatch, err := auth.CheckPasswordHash(params.Password, user.HashedPassword)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Failed to decode password", err)
 		return
 	}
 
-	if !pwmatch {
+	if !pwMatch {
 		respondWithError(w, http.StatusUnauthorized, "incorrect password or email", err)
 		return
 	}
 
-	expiresIn := 60 * time.Second
-	if params.ExpiresInSeconds != nil {
-		custExpiresIn := time.Duration(*params.ExpiresInSeconds) * time.Second
-		if custExpiresIn < expiresIn {
-			expiresIn = custExpiresIn
-		}
-	}
-
-	token, err := auth.MakeJWT(user.ID, cfg.jwtSecret, expiresIn)
+	token, err := auth.MakeJWT(user.ID, cfg.jwtSecret, time.Hour)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "failed to create access token", err)
 		return
 	}
 
+	refreshToken, err := auth.MakeRefreshToken()
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "failed to create refresh token", err)
+		return
+	}
+
+	refreshTokenCreatedAt := time.Now().UTC()
+	refreshExpiresAt := refreshTokenCreatedAt.AddDate(0, 0, 60)
+	_, err = cfg.db.StoreRefreshToken(r.Context(), database.StoreRefreshTokenParams{
+		Token:     refreshToken,
+		CreatedAt: refreshTokenCreatedAt,
+		UpdatedAt: refreshTokenCreatedAt,
+		UserID:    user.ID,
+		ExpiresAt: refreshExpiresAt,
+	})
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "failed to store refresh token", err)
+		return
+	}
+
 	resp := returnVals{
-		ID:        user.ID.String(),
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
-		Email:     user.Email,
-		Token:     token,
+		ID:           user.ID.String(),
+		CreatedAt:    user.CreatedAt,
+		UpdatedAt:    user.UpdatedAt,
+		Email:        user.Email,
+		Token:        token,
+		RefreshToken: refreshToken,
 	}
 	respondWithJSON(w, http.StatusOK, resp)
 }
