@@ -196,10 +196,10 @@ func (cfg *apiConfig) handlerUpdateUser(w http.ResponseWriter, r *http.Request) 
 	}
 
 	resp := returnVals{
-		ID:        user.ID.String(),
-		Email:     user.Email,
-		CreatedAt: user.CreatedAt,
-		UpdatedAt: user.UpdatedAt,
+		ID:          user.ID.String(),
+		Email:       user.Email,
+		CreatedAt:   user.CreatedAt,
+		UpdatedAt:   user.UpdatedAt,
 		IsChirpyRed: user.IsChirpyRed,
 	}
 	respondWithJSON(w, http.StatusOK, resp)
@@ -213,9 +213,20 @@ func (cfg *apiConfig) handlerUpgradeUserToRed(w http.ResponseWriter, r *http.Req
 		} `json:"data"`
 	}
 
+	apiKey, err := auth.GetAPIKey(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "key is not valid", err)
+		return
+	}
+
+	if apiKey != cfg.polkaAPIKey {
+		respondWithError(w, http.StatusUnauthorized, "key is not valid", err)
+		return
+	}
+
 	decoder := json.NewDecoder(r.Body)
 	params := parameters{}
-	err := decoder.Decode(&params)
+	err = decoder.Decode(&params)
 	if err != nil {
 		respondWithError(w, http.StatusInternalServerError, "Couldn't decode parameters", err)
 		return

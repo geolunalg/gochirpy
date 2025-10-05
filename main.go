@@ -17,6 +17,7 @@ type apiConfig struct {
 	fileserverHits atomic.Int32
 	db             *database.Queries
 	jwtSecret      string
+	polkaAPIKey    string
 }
 
 func main() {
@@ -37,6 +38,11 @@ func main() {
 		log.Fatal("JWT_SECRET must be set")
 	}
 
+	polkaAPIKey := os.Getenv("POLKA_KEY")
+	if dbURL == "" {
+		log.Fatal("POLKA_KEY must be set")
+	}
+
 	dbConn, err := sql.Open("postgres", dbURL)
 	if err != nil {
 		log.Fatalf("Error opening database: %s", err)
@@ -47,6 +53,7 @@ func main() {
 		fileserverHits: atomic.Int32{},
 		db:             dbQueries,
 		jwtSecret:      jwtSecret,
+		polkaAPIKey:    polkaAPIKey,
 	}
 
 	mux := http.NewServeMux()

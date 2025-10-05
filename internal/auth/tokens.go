@@ -78,6 +78,20 @@ func GetBearerToken(headers http.Header) (string, error) {
 	return splitAuth[1], nil
 }
 
+func GetAPIKey(headers http.Header) (string, error) {
+	auth := headers.Get("Authorization")
+	if auth == "" {
+		return "", fmt.Errorf("api key failed authorization")
+	}
+
+	splitAuth := strings.Split(auth, " ")
+	if len(splitAuth) < 2 || splitAuth[0] != "ApiKey" {
+		return "", fmt.Errorf("api key failed authorization")
+	}
+
+	return splitAuth[1], nil
+}
+
 func MakeRefreshToken() (string, error) {
 	key := make([]byte, 32)
 	_, err := rand.Read(key)
