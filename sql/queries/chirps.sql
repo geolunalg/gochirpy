@@ -5,8 +5,17 @@ RETURNING *;
 
 -- name: GetChirps :many
 SELECT * FROM chirps
-WHERE sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.narg('user_id')::uuid
-ORDER BY created_at ASC;
+WHERE (
+    sqlc.narg('user_id')::uuid IS NULL 
+    OR user_id = sqlc.narg('user_id')::uuid
+)
+ORDER BY
+  CASE
+    WHEN sqlc.narg('sort_dir') = 'asc'  THEN created_at
+  END ASC,
+  CASE
+    WHEN sqlc.narg('sort_dir') = 'desc' THEN created_at
+  END DESC;
 
 -- name: GetChirpById :one
 SELECT * FROM chirps WHERE id = $1;

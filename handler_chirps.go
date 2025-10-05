@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -108,12 +109,21 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		author = uuid.NullUUID{
-			UUID: authorUUID,
+			UUID:  authorUUID,
 			Valid: true,
 		}
 	}
 
-	chirps, err := cfg.db.GetChirps(r.Context(), author)
+	orderBy := sql.NullString{String: "asc", Valid: true}
+	sort := r.URL.Query().Get("sort")
+	if sort != "" && strings.ToLower(sort) == "desc" {
+		orderBy.String = sort
+	}
+
+	chirps, err := cfg.db.GetChirps(r.Context(), database.GetChirpsParams{
+		UserID:  author,
+		SortDir: orderBy,
+	})
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Failed to get chirp", err)
 		return
