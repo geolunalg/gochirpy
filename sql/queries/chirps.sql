@@ -5,6 +5,7 @@ RETURNING *;
 
 -- name: GetChirps :many
 SELECT * FROM chirps
+WHERE sqlc.narg('user_id')::uuid IS NULL OR user_id = sqlc.narg('user_id')::uuid
 ORDER BY created_at ASC;
 
 -- name: GetChirpById :one

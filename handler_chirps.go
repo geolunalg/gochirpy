@@ -95,7 +95,25 @@ func getCleanedBody(body string, badWords map[string]struct{}) string {
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	allChirps := []returnVals{}
 
-	chirps, err := cfg.db.GetChirps(r.Context())
+	author := uuid.NullUUID{
+		UUID:  uuid.Nil,
+		Valid: false,
+	}
+	var err error
+	authorId := r.URL.Query().Get("author_id")
+	if authorId != "" {
+		authorUUID, err := uuid.Parse(authorId)
+		if err != nil {
+			respondWithError(w, http.StatusBadRequest, "cannot parse author id", err)
+			return
+		}
+		author = uuid.NullUUID{
+			UUID: authorUUID,
+			Valid: true,
+		}
+	}
+
+	chirps, err := cfg.db.GetChirps(r.Context(), author)
 	if err != nil {
 		respondWithError(w, http.StatusBadRequest, "Failed to get chirp", err)
 		return
